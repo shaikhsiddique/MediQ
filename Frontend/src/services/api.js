@@ -62,13 +62,25 @@ export const authAPI = {
 export const patientAPI = {
   getProfile: () => req('GET', '/patients/profile'),
   updateProfile: (b) => req('PUT', '/patients/profile', b),
+  getRiskProgression: () => req('GET', '/patients/risk-progression'),
+  refreshSummary: () => req('POST', '/patients/refresh-summary'),
+  lookupDoctor: (email) =>
+    req('GET', `/patients/doctors/lookup?email=${encodeURIComponent(email)}`),
+  linkDoctor: (body) => req('POST', '/patients/link-doctor', body),
+  unlinkDoctor: () => req('DELETE', '/patients/link-doctor'),
 };
 
 export const doctorAPI = {
   getProfile: () => req('GET', '/doctors/profile'),
   getPatients: () => req('GET', '/doctors/patients'),
+  lookupPatient: (email) =>
+    req('GET', `/doctors/patients/lookup?email=${encodeURIComponent(email)}`),
+  linkPatientByEmail: (patientEmail) =>
+    req('POST', '/doctors/patients/link', { patientEmail }),
   assignPatient: (id) => req('POST', `/doctors/patients/${id}`),
   getPatient: (id) => req('GET', `/doctors/patients/${id}`),
+  getPatientRiskProgression: (id) =>
+    req('GET', `/doctors/patients/${id}/risk-progression`),
   removePatient: (id) => req('DELETE', `/doctors/patients/${id}`),
 };
 
@@ -81,8 +93,24 @@ export const healthAPI = {
   forPatient: (id) => req('GET', `/health-records/patient/${id}`),
 };
 
+export const monitorAPI = {
+  getStatus: () => req('GET', '/monitor/status'),
+  start: () => req('POST', '/monitor/start'),
+  stop: () => req('POST', '/monitor/stop'),
+  checkNow: () => req('POST', '/monitor/check'),
+};
+
 export const reportAPI = {
-  create: (b) => req('POST', '/reports', b),
+  create: (b, file = null) => {
+    if (file) {
+      const fd = new FormData();
+      fd.append('data', JSON.stringify(b));
+      fd.append('file', file);
+      return uploadReq('/reports', fd);
+    }
+    return req('POST', '/reports', b);
+  },
+  submitKidsBuddy: (b) => req('POST', '/reports/kids-buddy', b),
   uploadAndAnalyze: (file, notes = '') => {
     const fd = new FormData();
     fd.append('file', file);

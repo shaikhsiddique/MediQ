@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { reportAPI, patientAPI } from "../services/api";
+import RiskGraph from "../components/RiskGraph";
 import { useUser } from "../context/UserContext";
 import {
   AlertTriangle,
@@ -13,9 +14,16 @@ import {
   Activity,
   Moon,
   Footprints,
+  FileDown,
+  CalendarRange,
+  Sparkles,
+  UtensilsCrossed,
 } from "lucide-react";
+import KidsBuddyWidget from "../components/KidsBuddyWidget";
+import { exportPatientProfileToPdf } from "../utils/pdfExport";
 
-import { useLanguage } from "../context/LanguageContext";
+import { useT, pickLang, useLanguage } from "../context/LanguageContext";
+import { mrDashboard } from "../locales/mr";
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 
@@ -27,21 +35,24 @@ function UserDashboard() {
   const [profile, setProfile] = useState(null);
   const [latestReport, setLatestReport] = useState(null);
   const [allReports, setAllReports] = useState([]);
+  const [progression, setProgression] = useState(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [prof, reports] = await Promise.all([
+        const [prof, reports, prog] = await Promise.all([
           patientAPI.getProfile(),
           reportAPI.getAll(),
+          patientAPI.getRiskProgression().catch(() => null),
         ]);
-        setProfile(prof.patient || prof);
-        const list = reports.reports || reports || [];
+        setProfile(prof.data || prof.patient || prof);
+        const list = reports.reports || reports.data || reports || [];
         const sorted = [...list].sort(
           (a, b) => new Date(b.reportDate) - new Date(a.reportDate)
         );
         setAllReports(sorted);
         setLatestReport(sorted[0] || null);
+        setProgression(prog?.data || prog || null);
       } catch (err) {
         console.error(err);
       }
@@ -51,14 +62,22 @@ function UserDashboard() {
 
   const riskScore =
     location.state?.riskScore ??
+    (progression?.hasData
+      ? Math.round(parseFloat(progression.averageRiskScore))
+      : null) ??
     latestReport?.diabeticRiskScore ??
     profile?.diabeticScore ??
     "--";
 
   const riskLevel =
     location.state?.riskLevel ??
+    (progression?.hasData ? progression.currentRiskLevel : null) ??
     latestReport?.riskLevel ??
     null;
+
+  const trendChange = progression?.hasData
+    ? `${progression.percentageChange >= 0 ? "+" : ""}${progression.percentageChange}%`
+    : null;
 
   const displayName = profile?.name || user?.name || "User";
   const patientId = profile?._id || user?.id || "—";
@@ -80,6 +99,13 @@ function UserDashboard() {
       accuracy: "Prediction Accuracy",
 
       summary: "AI Health Summary",
+      monthlySummary: "30-Day Health Summary",
+      latestSummary: "Latest Report Summary",
+      monthlyHint: "Combined overview from all reports in the last 30 days",
+      latestHint: "From your most recent health test",
+      exportProfile: "Export Full Profile PDF",
+      noMonthly: "Complete a health test to build your 30-day summary.",
+      noLatest: "No recent report yet.",
 
       summaryText:
         "Glucose fluctuations, reduced activity, and irregular sleep patterns indicate possible diabetes risk progression.",
@@ -92,6 +118,8 @@ function UserDashboard() {
       testDesc: "Retake AI assessment",
       chatbotDesc: "Ask health questions",
       buddyDesc: "Talk with AI pet friend",
+      nutrifinder: "NutriFinder",
+      nutrifinderDesc: "Scan meals & nutrition",
       reportsDesc: "View scan history",
 
       progress: "Health Progress",
@@ -109,7 +137,7 @@ function UserDashboard() {
       sleep: "Sleep",
       glucose: "Glucose",
 
-      buddyTitle: "Buddy AI",
+      buddyTitle: "Kids Buddy",
 
       buddyText:
         "Hey Ahmed 🌟 Great job today! Let's drink more water and take a short evening walk together.",
@@ -132,6 +160,13 @@ function UserDashboard() {
       accuracy: "पूर्वानुमान सटीकता",
 
       summary: "AI स्वास्थ्य सारांश",
+      monthlySummary: "30-दिन का स्वास्थ्य सारांश",
+      latestSummary: "नवीनतम रिपोर्ट सारांश",
+      monthlyHint: "पिछले 30 दिन की सभी रिपोर्टों का संयुक्त अवलोकन",
+      latestHint: "आपके सबसे हाल के स्वास्थ्य परीक्षण से",
+      exportProfile: "पूर्ण प्रोफाइल PDF निर्यात",
+      noMonthly: "30-दिन का सारांश बनाने के लिए स्वास्थ्य परीक्षण करें।",
+      noLatest: "अभी कोई हाल की रिपोर्ट नहीं।",
 
       summaryText:
         "ग्लूकोज में उतार-चढ़ाव, कम गतिविधि और अनियमित नींद डायबिटीज जोखिम बढ़ने का संकेत देती है।",
@@ -144,6 +179,8 @@ function UserDashboard() {
       testDesc: "AI मूल्यांकन दोबारा करें",
       chatbotDesc: "स्वास्थ्य प्रश्न पूछें",
       buddyDesc: "AI पालतू मित्र से बात करें",
+      nutrifinder: "NutriFinder",
+      nutrifinderDesc: "भोजन स्कैन और पोषण",
       reportsDesc: "पुरानी स्कैन रिपोर्ट देखें",
 
       progress: "स्वास्थ्य प्रगति",
@@ -161,28 +198,46 @@ function UserDashboard() {
       sleep: "नींद",
       glucose: "ग्लूकोज",
 
-      buddyTitle: "बडी AI",
+      buddyTitle: "किड्स बडी",
 
       buddyText:
         "हे अहमद 🌟 आज आपने बहुत अच्छा किया! चलो ज्यादा पानी पीते हैं और शाम को थोड़ी वॉक करते हैं।",
 
       talk: "बडी से बात करें",
     },
+    mr: mrDashboard,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
-  const aiSummary =
+  const monthlySummary =
+    profile?.monthlyHealthSummary || t.noMonthly;
+  const latestSummary =
+    profile?.latestHealthSummary ||
     latestReport?.healthSummary ||
-    profile?.healthSummary ||
-    t.summaryText;
+    t.noLatest;
+
+  const handleExportProfile = () => {
+    if (!profile) return;
+    exportPatientProfileToPdf(profile, allReports);
+  };
   const aiConfidence = latestReport?.aiConfidence ?? 85;
-  const recommendations = latestReport?.recommendation
-    ? latestReport.recommendation.split(/[.;]\s+/).filter(Boolean).slice(0, 4)
-    : [t.rec1, t.rec2, t.rec3, t.rec4];
-  const progressData = allReports.slice(0, 5).map((r) => ({
-    date: new Date(r.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-    score: `${r.diabeticRiskScore ?? 0}%`,
+  const recommendations =
+    progression?.recommendations?.length > 0
+      ? progression.recommendations.map((r) => r.message).slice(0, 4)
+      : latestReport?.recommendation
+      ? latestReport.recommendation.split(/[.;]\s+/).filter(Boolean).slice(0, 4)
+      : [t.rec1, t.rec2, t.rec3, t.rec4];
+  const progressData = (
+    progression?.reportTimeline?.length
+      ? progression.reportTimeline
+      : allReports
+  ).map((r) => ({
+    date: new Date(r.date || r.reportDate).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    }),
+    score: `${r.riskScore ?? r.diabeticRiskScore ?? 0}%`,
     level: r.riskLevel,
   }));
   const riskRingColor =
@@ -200,12 +255,12 @@ function UserDashboard() {
 
   const riskLabel =
     riskLevel === "low"
-      ? (language === "hi" ? "कम जोखिम" : "Low Risk")
+      ? pickLang("Low Risk", "कम जोखिम", mrDashboard.lowRisk, language)
       : riskLevel === "high"
-      ? (language === "hi" ? "उच्च जोखिम" : "High Risk")
+      ? pickLang("High Risk", "उच्च जोखिम", mrDashboard.highRisk, language)
       : riskLevel === "medium"
       ? t.medium
-      : "No data yet";
+      : pickLang("No data yet", "अद्याप डेटा नहीं", mrDashboard.noData, language);
 
   const actionCards = [
     {
@@ -233,6 +288,14 @@ function UserDashboard() {
     },
 
     {
+      title: t.nutrifinder,
+      desc: t.nutrifinderDesc,
+      icon: <UtensilsCrossed className="w-8 h-8" />,
+      color: "from-lime-500 to-green-600",
+      link: "/nutrifinder",
+    },
+
+    {
       title: t.reports,
       desc: t.reportsDesc,
       icon: <History className="w-8 h-8" />,
@@ -240,8 +303,8 @@ function UserDashboard() {
       link : "/history"
     },
     {
-      title: language === "hi" ? "प्रोफाइल" : "Profile",
-      desc: language === "hi" ? "अपनी जानकारी संपादित करें" : "Edit your health info",
+      title: pickLang("Profile", "प्रोफाइल", mrDashboard.profile, language),
+      desc: pickLang("Edit your health info", "अपनी जानकारी संपादित करें", mrDashboard.profileDesc, language),
       icon: <HeartPulse className="w-8 h-8" />,
       color: "from-indigo-500 to-blue-500",
       link: "/profile",
@@ -250,10 +313,10 @@ function UserDashboard() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 md:p-12 my-12">
+    <div className="page-shell px-3 py-6 sm:px-6 md:px-12 md:py-12 pt-20 sm:pt-24 max-w-7xl mx-auto w-full">
         <Navbar/>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg p-6 border border-white/50">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg mt-4 sm:mt-6 border border-white/50 ">
 
         <div className="flex flex-col md:flex-row justify-between items-center">
 
@@ -269,18 +332,24 @@ function UserDashboard() {
 
           </div>
 
-          <div className="mt-6 md:mt-0">
-
-            <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-2xl shadow-lg font-semibold">
+          <div className="w-full sm:w-auto shrink-0 flex flex-col gap-2 mt-4 sm:mt-0">
+            <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl shadow-lg font-semibold text-sm sm:text-base text-center">
               Patient ID : {String(patientId).slice(-8).toUpperCase()}
             </div>
-
+            <button
+              type="button"
+              onClick={handleExportProfile}
+              className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-2xl shadow-sm font-semibold text-sm hover:bg-gray-50 transition-colors"
+            >
+              <FileDown className="w-4 h-4 shrink-0" />
+              {t.exportProfile}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Top Cards */}
-      <div className="grid lg:grid-cols-3 gap-6 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
 
         {/* Risk */}
         <div className="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
@@ -372,7 +441,7 @@ function UserDashboard() {
           <div className="text-center mt-12">
 
             <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-              {aiConfidence}%
+              80%
             </h1>
 
             <p className="text-gray-500 mt-3">
@@ -383,42 +452,77 @@ function UserDashboard() {
         </div>
       </div>
 
-      {/* AI Summary */}
-      <div className="bg-white rounded-3xl shadow-lg p-8 mt-8 border border-gray-100">
+      <div className="mt-8">
+        <RiskGraph
+          timeline={progression?.reportTimeline || []}
+          averageRisk={progression?.averageRiskScore}
+          trendDirection={progression?.trendDirection}
+          currentRisk={progression?.currentRiskScore}
+        />
+      </div>
 
-        <h2 className="text-2xl font-bold text-gray-800">
+      {/* Health Summaries */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6 sm:mt-8">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 border border-gray-100">
+          <div className="flex items-start gap-3">
+            <CalendarRange className="w-7 h-7 text-blue-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-800">{t.monthlySummary}</h2>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1">{t.monthlyHint}</p>
+            </div>
+          </div>
+          <p className="text-gray-600 mt-4 text-sm sm:text-base leading-relaxed">{monthlySummary}</p>
+          {profile?.monthlySummaryUpdatedAt && (
+            <p className="text-xs text-gray-400 mt-3">
+              Updated {new Date(profile.monthlySummaryUpdatedAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 border border-gray-100">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-7 h-7 text-purple-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-800">{t.latestSummary}</h2>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1">{t.latestHint}</p>
+            </div>
+          </div>
+          <p className="text-gray-600 mt-4 text-sm sm:text-base leading-relaxed">{latestSummary}</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 mt-6 sm:mt-8 border border-gray-100">
+
+        <h2 className="text-lg sm:text-2xl font-bold text-gray-800">
           {t.summary}
         </h2>
 
-        <p className="text-gray-600 mt-4 text-lg leading-relaxed">
-          {aiSummary}
-        </p>
-
-        {progressData.length > 0 && (
-        <div className="mt-10 flex items-end gap-3 h-52">
+        {progressData.length > 0 ? (
+        <div className="mt-6 sm:mt-10 flex items-end gap-2 sm:gap-3 h-40 sm:h-52 overflow-x-auto pb-2">
           {progressData.map((item, i) => {
             const h = Math.max(20, (parseInt(item.score, 10) / 100) * 200);
             const color =
               item.level === "low" ? "bg-green-400" : item.level === "medium" ? "bg-yellow-400" : "bg-red-400";
             return (
-              <div key={i} className="flex flex-col items-center flex-1">
-                <div className={`${color} w-full max-w-14 rounded-t-3xl`} style={{ height: `${h}px` }}></div>
-                <span className="text-xs text-gray-500 mt-2">{item.date}</span>
+              <div key={i} className="flex flex-col items-center flex-1 min-w-[2.5rem]">
+                <div className={`${color} w-full max-w-14 rounded-t-3xl`} style={{ height: `${h}px` }} />
+                <span className="text-xs text-gray-500 mt-2 whitespace-nowrap">{item.date}</span>
               </div>
             );
           })}
         </div>
+        ) : (
+          <p className="text-gray-500 mt-4 text-sm">{t.noLatest}</p>
         )}
       </div>
 
       {/* Action Cards */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-4 sm:gap-6 mt-6 sm:mt-8">
 
         {actionCards.map((card, index) => (
 
           <Link to={card.link}
             key={index}
-            className={`bg-gradient-to-r ${card.color} text-white p-6 rounded-3xl shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer`}
+            className={`bg-gradient-to-r ${card.color} text-white p-5 sm:p-6 rounded-2xl shadow-lg hover:scale-[1.02] sm:hover:scale-[1.03] transition-all duration-300 cursor-pointer block border border-white/20`}
           >
 
             <div className="bg-white/20 w-16 h-16 rounded-2xl flex items-center justify-center">
@@ -438,7 +542,7 @@ function UserDashboard() {
       </div>
 
       {/* Bottom Grid */}
-      <div className="grid lg:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6 sm:mt-8">
 
         {/* Progress */}
         <div className="bg-white rounded-3xl shadow-lg p-6 border border-gray-100">
@@ -462,49 +566,44 @@ function UserDashboard() {
             ))}
           </div>
 
-          <div className="mt-6 flex items-center gap-2 text-red-600 font-semibold">
-
+          {trendChange && (
+          <div className="mt-6 flex items-center gap-2 font-semibold">
             <TrendingUp className="w-5 h-5" />
-
-            {t.increase} +8%
-
+            <span
+              className={
+                progression?.trendDirection === "decreasing"
+                  ? "text-green-600"
+                  : progression?.trendDirection === "increasing"
+                  ? "text-red-600"
+                  : "text-yellow-600"
+              }
+            >
+              {progression?.trendDirection === "decreasing"
+                ? pickLang("Risk decreasing", "जोखिम घट रहा है", mrDashboard.riskDecreasing, language)
+                : progression?.trendDirection === "increasing"
+                ? t.increase
+                : pickLang("Risk stable", "जोखिम स्थिर", mrDashboard.riskStable, language)}{" "}
+              {trendChange}
+            </span>
           </div>
+          )}
         </div>
 
-        {/* Buddy */}
-        <div className="bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 rounded-3xl shadow-lg p-6">
-
-          <div className="flex items-center gap-5">
-
-            <div className="bg-white w-24 h-24 rounded-full flex items-center justify-center shadow-lg text-5xl">
-              🐼
-            </div>
-
-            <div>
-
-              <h2 className="text-3xl font-bold text-gray-800">
-                {t.buddyTitle}
-              </h2>
-
-              <p className="text-gray-600 mt-1">
-                Your friendly health pet
-              </p>
-
-            </div>
-          </div>
-
-          <div className="bg-white mt-8 rounded-3xl p-6 shadow-sm">
-
-            <p className="text-lg text-gray-700 leading-relaxed">
-              Hey {displayName.split(" ")[0]} 🌟 {latestReport?.recommendation?.split(".")[0] || t.buddyText}
-            </p>
-
-          </div>
-
-          <Link to="/kidbuddy" className="mt-8 block w-full text-center bg-gradient-to-r from-pink-600 to-purple-600 text-white py-4 rounded-2xl text-lg font-semibold hover:shadow-xl transition-all">
-            {t.talk}
-          </Link>
-        </div>
+        <KidsBuddyWidget
+          displayName={displayName}
+          riskLevel={riskLevel}
+          sleepHours={latestReport?.sleepHours}
+          trendDirection={progression?.trendDirection}
+          recommendation={latestReport?.recommendation}
+          talkLabel={t.talk}
+          title={t.buddyTitle}
+          subtitle={pickLang(
+            "Your friendly health pet",
+            "आपका दोस्ताना स्वास्थ्य पालतू",
+            "तुमचा आरोग्य मित्र",
+            language
+          )}
+        />
       </div>
 
       {/* Recommendation Cards */}
@@ -514,7 +613,7 @@ function UserDashboard() {
           {t.recommendations}
         </h2>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-8">
           {recommendations.map((rec, i) => {
             const icons = [
               <Activity className="text-blue-500 w-8 h-8 mb-4" key="a" />,

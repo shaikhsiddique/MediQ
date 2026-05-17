@@ -13,13 +13,14 @@ import {
 
 import { Link } from "react-router-dom";
 import { SOCKET_URL } from "../config";
+import { exportReportToPdf } from "../utils/pdfExport";
 
-import { useLanguage } from "../context/LanguageContext";
+import { useT } from "../context/LanguageContext";
+import { mrHistory } from "../locales/mr";
 import Navbar from "../components/Navbar";
 
 function History() {
 
-  const { language } = useLanguage();
 
   const [search, setSearch] = useState("");
   const [reports, setReports] = useState([]);
@@ -49,16 +50,6 @@ function History() {
     return "red";
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this report?")) return;
-    try {
-      await reportAPI.delete(id);
-      setReports((prev) => prev.filter((r) => r._id !== id));
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
   const translations = {
 
     en: {
@@ -80,8 +71,10 @@ function History() {
       edit: "Edit",
       delete: "Delete",
       download: "Download PDF",
+      exportPdf: "Export PDF",
 
       noReports: "No reports found",
+      deleteConfirm: "Delete this report?",
     },
 
     hi: {
@@ -103,12 +96,25 @@ function History() {
       edit: "संपादित करें",
       delete: "हटाएं",
       download: "PDF डाउनलोड करें",
+      exportPdf: "PDF निर्यात",
 
       noReports: "कोई रिपोर्ट नहीं मिली",
+      deleteConfirm: "क्या आप इस रिपोर्ट को हटाना चाहते हैं?",
     },
+    mr: mrHistory,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm(t.deleteConfirm)) return;
+    try {
+      await reportAPI.delete(id);
+      setReports((prev) => prev.filter((r) => r._id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const riskToStatus = (level) => {
     if (level === "low") return t.low;
@@ -154,7 +160,7 @@ function History() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 md:p-8">
+    <div className="page-shell px-3 py-6 sm:px-6 md:px-8 pt-20 sm:pt-24 max-w-5xl mx-auto w-full">
         <Navbar/>
       {/* Header */}
       <div className="bg-white rounded-[32px] shadow-xl p-6 md:p-8 border border-gray-100">
@@ -235,7 +241,7 @@ function History() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 sm:gap-3 w-full xl:w-auto">
 
                   {/* View */}
                   <Link
@@ -270,25 +276,30 @@ function History() {
 
                   </button>
 
-                  {/* Download */}
-                  {report.raw?.attachedFile ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      exportReportToPdf(report.raw, user?.name || report.patient)
+                    }
+                    className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl transition-all shadow-md text-sm sm:text-base"
+                  >
+                    <Download className="w-5 h-5 shrink-0" />
+                    {t.exportPdf || t.download}
+                  </button>
+
+                  {(report.raw?.documentUrl || report.raw?.attachedFile) && (
                     <a
-                      href={`${SOCKET_URL}/uploads/${report.raw.attachedFile}`}
+                      href={
+                        report.raw.documentUrl ||
+                        `${SOCKET_URL}/uploads/${report.raw.attachedFile}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-2xl transition-all shadow-md hover:scale-105"
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl transition-all shadow-md text-sm sm:text-base"
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="w-5 h-5 shrink-0" />
                       {t.download}
                     </a>
-                  ) : (
-                    <Link
-                      to={`/history/${report.id}`}
-                      className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-2xl transition-all shadow-md hover:scale-105"
-                    >
-                      <Download className="w-5 h-5" />
-                      {t.view}
-                    </Link>
                   )}
 
                 </div>

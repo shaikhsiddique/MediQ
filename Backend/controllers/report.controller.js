@@ -22,12 +22,13 @@ const createReport = asyncHandler(async (req, res) => {
     );
   }
 
-  const { patientId: _omit, ...reportData } = req.body;
+  const { patientId: _omit, ...payload } = req.body;
   const doctorId = req.userRole === "doctor" ? req.userId : null;
   const report = await reportService.createReport(
     patientId,
-    reportData,
-    doctorId
+    payload,
+    doctorId,
+    req.file || null
   );
   res.status(201).json({ success: true, report });
 });
@@ -115,8 +116,24 @@ const uploadAndAnalyze = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, report });
 });
 
+const createKidsBuddyReport = asyncHandler(async (req, res) => {
+  if (req.userRole !== "patient") {
+    return res.status(403).json({
+      success: false,
+      message: "Only patients can submit Kids Buddy assessments",
+    });
+  }
+
+  const report = await reportService.createKidsBuddyReport(
+    req.userId,
+    req.body
+  );
+  res.status(201).json({ success: true, report });
+});
+
 module.exports = {
   createReport,
+  createKidsBuddyReport,
   uploadAndAnalyze,
   getReports,
   getPatientReports,

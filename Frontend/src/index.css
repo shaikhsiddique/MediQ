@@ -1,1 +1,87 @@
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply transition-colors duration-300;
+}
+
+.page-shell {
+  @apply min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50;
+}
+.dark .page-shell {
+  @apply from-slate-900 via-gray-950 to-slate-900;
+}
+
+.page-shell-green {
+  @apply min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50;
+}
+.dark .page-shell-green {
+  @apply from-slate-900 via-gray-950 to-emerald-950;
+}
+
+.page-shell-kids {
+  @apply min-h-screen bg-gradient-to-br from-blue-100 via-white to-green-100;
+}
+.dark .page-shell-kids {
+  @apply from-indigo-950 via-gray-950 to-emerald-950;
+}
+
+.dark .bg-white {
+  @apply !bg-slate-800 !text-slate-100;
+}
+.dark .bg-white\/80,
+.dark .bg-white\/90 {
+  @apply !bg-slate-800/90;
+}
+.dark .bg-gray-50 {
+  @apply !bg-slate-700/60;
+}
+.dark .bg-gray-100 {
+  @apply !bg-slate-700;
+}
+.dark .border-gray-100,
+.dark .border-gray-200 {
+  @apply !border-slate-600;
+}
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  @apply !text-slate-100;
+}
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  @apply !text-slate-400;
+}
+.dark input,
+.dark select,
+.dark textarea {
+  @apply !bg-slate-700 !border-slate-600 !text-slate-100;
+}
+.dark pre {
+  @apply !bg-slate-900 !text-slate-200;
+}
+.dark .bg-blue-50 {
+  @apply !bg-blue-950/40;
+}
+.dark .bg-green-50 {
+  @apply !bg-green-950/40;
+}
+.dark .bg-yellow-50 {
+  @apply !bg-yellow-950/30;
+}
+.dark .bg-pink-50,
+.dark .bg-purple-50 {
+  @apply !bg-purple-950/30;
+}
+.dark .bg-orange-100 {
+  @apply !bg-orange-950/40;
+}

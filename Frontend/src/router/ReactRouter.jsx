@@ -11,7 +11,9 @@ import Test from '../page/Test';
 import KidsPetBuddy from '../page/KidsPetBuddy';
 import DoctorDashboard from '../page/DoctorDashboard';
 import Profile from '../page/Profile';
+import GuardianMonitor from '../page/GuardianMonitor';
 import ReportDetail from '../page/ReportDetail';
+import NutriFinder from '../page/NutriFinder';
 import ProtectedRoute from '../auth/ProtectedRoute';
 import GuestRoute from '../auth/GuestRoute';
 
@@ -62,6 +64,16 @@ function ReactRouter() {
         <Route path='/test' element={
           <ProtectedRoute role="patient">
             <Test/>
+          </ProtectedRoute>
+        }/>
+        <Route path='/guardian' element={
+          <ProtectedRoute role="patient">
+            <GuardianMonitor/>
+          </ProtectedRoute>
+        }/>
+        <Route path='/nutrifinder' element={
+          <ProtectedRoute role="patient">
+            <NutriFinder/>
           </ProtectedRoute>
         }/>
       </Routes>

@@ -10,12 +10,19 @@ import {
   ArrowLeft,
   Loader2,
   Activity,
+  FileDown,
+  Stethoscope,
+  Link2,
+  Unlink,
 } from "lucide-react";
+import { reportAPI } from "../services/api";
+import { exportPatientProfileToPdf } from "../utils/pdfExport";
 import Navbar from "../components/Navbar";
 import HealthVitalsFields from "../components/HealthVitalsFields";
 import { patientAPI } from "../services/api";
 import { useUser } from "../context/UserContext";
-import { useLanguage } from "../context/LanguageContext";
+import { useT } from "../context/LanguageContext";
+import { mrProfile } from "../locales/mr";
 import { buildQuickAssessment } from "../utils/buildQuickAssessment";
 
 const defaultVitals = {
@@ -29,7 +36,6 @@ const defaultVitals = {
 };
 
 function Profile() {
-  const { language } = useLanguage();
   const { user, updateUser } = useUser();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,8 +59,13 @@ function Profile() {
     },
   });
   const [vitals, setVitals] = useState(defaultVitals);
+  const [profileData, setProfileData] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [doctorEmail, setDoctorEmail] = useState("");
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkMessage, setLinkMessage] = useState("");
 
-  const t = {
+  const t = useT({
     en: {
       title: "My Profile",
       subtitle: "View and update your health profile",
@@ -92,8 +103,19 @@ function Profile() {
       hba1c: "HbA1c (%)",
       temperature: "Body temperature (°C)",
       respiratory: "Respiratory rate (/min)",
-      healthSummary: "Health Summary",
+      healthSummary: "Profile Notes",
       healthSummaryPlaceholder: "Allergies, medications, conditions...",
+      monthlySummary: "30-Day AI Summary",
+      latestSummary: "Latest Report Summary",
+      exportPdf: "Export Full Profile PDF",
+      myDoctor: "My Doctor",
+      linkDoctorHint: "Enter your doctor's email to link. Both of you will get an SMS on the phone numbers in your profiles.",
+      doctorEmail: "Doctor's email",
+      linkDoctor: "Link with doctor",
+      unlinkDoctor: "Unlink doctor",
+      linkedWith: "Linked with",
+      smsNote: "SMS sent to your number and your doctor's number when linked.",
+      noDoctor: "No doctor linked yet",
     },
     hi: {
       title: "मेरी प्रोफाइल",
@@ -135,13 +157,15 @@ function Profile() {
       healthSummary: "स्वास्थ्य सारांश",
       healthSummaryPlaceholder: "एलर्जी, दवाएं, बीमारियां...",
     },
-  }[language];
+    mr: mrProfile,
+  });
 
   useEffect(() => {
-    patientAPI
-      .getProfile()
-      .then((data) => {
-        const p = data.patient || data;
+    Promise.all([patientAPI.getProfile(), reportAPI.getAll()])
+      .then(([profRes, repRes]) => {
+        const p = profRes.data || profRes;
+        setProfileData(p);
+        setReports(repRes.reports || repRes.data || repRes || []);
         setForm({
           name: p.name || "",
           phone: p.phone || "",
@@ -197,6 +221,52 @@ function Profile() {
     setVitals((prev) => ({ ...prev, ...patch }));
   };
 
+  const linkedDoctor = profileData?.doctor;
+
+  const reloadProfile = async () => {
+    const profRes = await patientAPI.getProfile();
+    const p = profRes.data || profRes;
+    setProfileData(p);
+    return p;
+  };
+
+  const handleLinkDoctor = async (e) => {
+    e.preventDefault();
+    if (!doctorEmail.trim()) return;
+    setLinkLoading(true);
+    setLinkMessage("");
+    setError("");
+    try {
+      const res = await patientAPI.linkDoctor({
+        doctorEmail: doctorEmail.trim(),
+      });
+      setLinkMessage(
+        res.message ||
+          "Linked! Check your phone for a confirmation SMS."
+      );
+      setDoctorEmail("");
+      await reloadProfile();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleUnlinkDoctor = async () => {
+    if (!window.confirm("Unlink your doctor?")) return;
+    setLinkLoading(true);
+    try {
+      await patientAPI.unlinkDoctor();
+      setLinkMessage("Doctor unlinked.");
+      await reloadProfile();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -216,7 +286,8 @@ function Profile() {
         quickAssessment: buildQuickAssessment(vitals),
       };
       const data = await patientAPI.updateProfile(payload);
-      const updated = data.patient || data;
+      const updated = data.patient || data.data || data;
+      setProfileData(updated);
       updateUser({
         ...updated,
         diabeticScore: updated.diabeticScore,
@@ -236,7 +307,7 @@ function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="page-shell flex items-center justify-center min-h-screen">
         <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
         <span className="ml-3 text-gray-600">{t.loading}</span>
       </div>
@@ -246,9 +317,9 @@ function Profile() {
   const displayScore = user?.diabeticScore ?? "—";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 md:p-8 pt-24">
+    <div className="page-shell px-3 py-6 sm:px-6 md:px-8 pt-20 sm:pt-24 min-h-screen">
       <Navbar />
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto w-full">
         <Link
           to="/dashboard"
           className="inline-flex items-center gap-2 bg-white px-5 py-3 rounded-2xl shadow-md hover:shadow-lg transition-all text-gray-700 font-semibold mb-6"
@@ -267,12 +338,133 @@ function Profile() {
               <p className="text-gray-500 mt-1">{t.subtitle}</p>
               <p className="text-sm text-gray-400 mt-1">{user?.email}</p>
             </div>
-            <div className="ml-auto text-center bg-blue-50 rounded-2xl px-5 py-3">
-              <p className="text-xs text-gray-500">{t.riskScore}</p>
-              <p className="text-2xl font-bold text-blue-600">{displayScore}%</p>
+            <div className="flex flex-col sm:items-end gap-2 sm:ml-auto shrink-0">
+              <div className="text-center bg-blue-50 rounded-2xl px-5 py-3">
+                <p className="text-xs text-gray-500">{t.riskScore}</p>
+                <p className="text-2xl font-bold text-blue-600">{displayScore}%</p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  exportPatientProfileToPdf(
+                    { ...profileData, ...form, email: user?.email },
+                    reports
+                  )
+                }
+                className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-2xl font-semibold text-sm"
+              >
+                <FileDown className="w-4 h-4" />
+                {t.exportPdf}
+              </button>
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-6 border border-gray-100 mb-6">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-emerald-600" />
+            {t.myDoctor}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">{t.linkDoctorHint}</p>
+          <p className="text-xs text-gray-400 mt-1">{t.smsNote}</p>
+
+          {linkedDoctor?._id || linkedDoctor ? (
+            <div className="mt-4 bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+              <p className="font-semibold text-gray-800">
+                {t.linkedWith}: Dr. {linkedDoctor.name}
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                {linkedDoctor.specialization} · {linkedDoctor.email}
+              </p>
+              {linkedDoctor.phone && (
+                <p className="text-sm text-gray-500">📱 {linkedDoctor.phone}</p>
+              )}
+              <button
+                type="button"
+                onClick={handleUnlinkDoctor}
+                disabled={linkLoading}
+                className="mt-4 flex items-center gap-2 text-red-600 font-semibold text-sm hover:underline disabled:opacity-50"
+              >
+                <Unlink className="w-4 h-4" />
+                {t.unlinkDoctor}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleLinkDoctor} className="mt-4 flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                value={doctorEmail}
+                onChange={(e) => setDoctorEmail(e.target.value)}
+                placeholder={t.doctorEmail}
+                className={inputClass}
+                required
+              />
+              <button
+                type="submit"
+                disabled={linkLoading}
+                className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-emerald-700 disabled:opacity-60 shrink-0"
+              >
+                <Link2 className="w-5 h-5" />
+                {linkLoading ? "..." : t.linkDoctor}
+              </button>
+            </form>
+          )}
+
+          {linkMessage && (
+            <p className="mt-3 text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl">
+              {linkMessage}
+            </p>
+          )}
+        </div>
+
+        {profileData?.documents?.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 mb-6">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+              <FileDown className="w-5 h-5 text-emerald-600" />
+              Saved lab reports
+            </h3>
+            <ul className="mt-3 space-y-2">
+              {profileData.documents.map((doc, i) => (
+                <li key={doc._id || i}>
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 hover:underline text-sm font-medium"
+                  >
+                    {doc.fileName || `Report ${i + 1}`}
+                  </a>
+                  <span className="text-gray-400 text-xs ml-2">
+                    {doc.uploadedAt
+                      ? new Date(doc.uploadedAt).toLocaleDateString()
+                      : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {(profileData?.monthlyHealthSummary || profileData?.latestHealthSummary) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {profileData?.monthlyHealthSummary && (
+              <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100">
+                <h3 className="font-bold text-gray-800">{t.monthlySummary}</h3>
+                <p className="text-gray-600 mt-2 text-sm leading-relaxed">
+                  {profileData.monthlyHealthSummary}
+                </p>
+              </div>
+            )}
+            {profileData?.latestHealthSummary && (
+              <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100">
+                <h3 className="font-bold text-gray-800">{t.latestSummary}</h3>
+                <p className="text-gray-600 mt-2 text-sm leading-relaxed">
+                  {profileData.latestHealthSummary}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <p className="mb-4 text-red-600 bg-red-50 py-3 px-4 rounded-2xl">{error}</p>

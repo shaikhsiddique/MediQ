@@ -13,7 +13,10 @@ import {
 import Navbar from "../components/Navbar";
 import { reportAPI } from "../services/api";
 import { SOCKET_URL } from "../config";
-import { useLanguage } from "../context/LanguageContext";
+import { useT } from "../context/LanguageContext";
+import { mrReportDetail } from "../locales/mr";
+import { useUser } from "../context/UserContext";
+import { exportReportToPdf } from "../utils/pdfExport";
 
 const API_HOST = SOCKET_URL;
 
@@ -21,7 +24,7 @@ function ReportDetail() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const isEditMode = searchParams.get("edit") === "1";
-  const { language } = useLanguage();
+  const { user } = useUser();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -29,7 +32,7 @@ function ReportDetail() {
   const [remarks, setRemarks] = useState("");
   const [editing, setEditing] = useState(isEditMode);
 
-  const t = {
+  const t = useT({
     en: {
       back: "Back to History",
       title: "Report Details",
@@ -44,6 +47,9 @@ function ReportDetail() {
       upload: "Uploaded Document",
       file: "Attached File",
       download: "Download File",
+      ocrText: "Detected report text (OCR)",
+      ocrEmpty: "No text could be extracted from this file.",
+      exportPdf: "Export Report PDF",
       notFound: "Report not found",
       remarks: "Your Notes",
       remarksPlaceholder: "Add or update your personal notes for this report...",
@@ -51,6 +57,7 @@ function ReportDetail() {
       saved: "Report updated successfully!",
       edit: "Edit Notes",
       cancel: "Cancel",
+      aiAnalyzed: "AI analysis complete",
     },
     hi: {
       back: "इतिहास पर वापस",
@@ -66,6 +73,7 @@ function ReportDetail() {
       upload: "अपलोड किया दस्तावेज",
       file: "संलग्न फ़ाइल",
       download: "फ़ाइल डाउनलोड करें",
+      exportPdf: "रिपोर्ट PDF निर्यात",
       notFound: "रिपोर्ट नहीं मिली",
       remarks: "आपके नोट्स",
       remarksPlaceholder: "इस रिपोर्ट के लिए अपने नोट्स जोड़ें या अपडेट करें...",
@@ -73,8 +81,10 @@ function ReportDetail() {
       saved: "रिपोर्ट सफलतापूर्वक अपडेट!",
       edit: "नोट्स संपादित करें",
       cancel: "रद्द करें",
+      aiAnalyzed: "AI विश्लेषण पूर्ण",
     },
-  }[language];
+    mr: mrReportDetail,
+  });
 
   useEffect(() => {
     reportAPI
@@ -112,7 +122,7 @@ function ReportDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="page-shell flex items-center justify-center min-h-screen">
         <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
       </div>
     );
@@ -120,7 +130,7 @@ function ReportDetail() {
 
   if (error || !report) {
     return (
-      <div className="min-h-screen p-8 pt-24">
+      <div className="page-shell p-8 pt-24 min-h-screen">
         <Navbar />
         <p className="text-center text-red-600">{error || t.notFound}</p>
         <Link to="/history" className="block text-center mt-4 text-blue-600">
@@ -130,14 +140,14 @@ function ReportDetail() {
     );
   }
 
-  const fileUrl = report.attachedFile
-    ? `${API_HOST}/uploads/${report.attachedFile}`
-    : null;
+  const fileUrl =
+    report.documentUrl ||
+    (report.attachedFile ? `${API_HOST}/uploads/${report.attachedFile}` : null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 md:p-8 pt-24">
+    <div className="page-shell px-3 py-6 sm:px-6 md:px-8 pt-20 sm:pt-24 min-h-screen">
       <Navbar />
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto w-full">
         <Link
           to="/history"
           className="inline-flex items-center gap-2 bg-white px-5 py-3 rounded-2xl shadow-md mb-6 text-gray-700 font-semibold"
@@ -146,9 +156,19 @@ function ReportDetail() {
           {t.back}
         </Link>
 
-        <div className="bg-white rounded-[32px] shadow-xl p-8 border border-gray-100">
-          <h1 className="text-3xl font-bold text-gray-800">{t.title}</h1>
-          <div className="flex items-center gap-2 mt-2 text-gray-500">
+        <div className="bg-white rounded-2xl sm:rounded-[32px] shadow-xl p-5 sm:p-8 border border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{t.title}</h1>
+            <button
+              type="button"
+              onClick={() => exportReportToPdf(report, user?.name)}
+              className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-2xl font-semibold text-sm shrink-0"
+            >
+              <Download className="w-5 h-5" />
+              {t.exportPdf}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-2 text-gray-500 text-sm sm:text-base">
             <CalendarDays className="w-4 h-4" />
             {t.date}: {new Date(report.reportDate).toLocaleDateString()}
           </div>
@@ -165,7 +185,7 @@ function ReportDetail() {
             <div className="mt-4 flex items-center gap-2 text-purple-600 bg-purple-50 px-4 py-2 rounded-xl">
               <Bot className="w-5 h-5" />
               <span>
-                {t.confidence}: {report.aiConfidence ?? 85}%
+                {t.aiAnalyzed} — {t.confidence}: {report.aiConfidence ?? 85}%
               </span>
             </div>
           )}
@@ -257,6 +277,15 @@ function ReportDetail() {
                 {t.download}
               </a>
             </div>
+          )}
+
+          {(report.extractedText || report.sourceType === "upload") && (
+            <div className="mt-6 bg-gray-50 rounded-2xl p-5 border border-gray-100">
+              <h3 className="font-bold text-gray-800">{t.ocrText}</h3>
+              <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                {report.extractedText?.trim() || t.ocrEmpty}
+              </p>
+              </div>
           )}
 
           {report.glucoseLevel != null && (

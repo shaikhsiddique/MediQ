@@ -116,8 +116,22 @@ const reportSchema = new mongoose.Schema(
     },
     sourceType: {
       type: String,
-      enum: ["form", "upload"],
+      enum: ["form", "upload", "kids_buddy"],
       default: "form",
+    },
+    kidsBuddyData: {
+      answers: [
+        {
+          questionKey: String,
+          question: String,
+          answerType: String,
+          points: Number,
+          feedback: String,
+        },
+      ],
+      totalScore: Number,
+      maxScore: Number,
+      language: String,
     },
     attachedFile: {
       type: String,
@@ -130,6 +144,16 @@ const reportSchema = new mongoose.Schema(
     attachedFileMime: {
       type: String,
       default: "",
+    },
+    documentUrl: {
+      type: String,
+      default: "",
+      comment: "Public URL to the saved PDF/image on the server",
+    },
+    extractedText: {
+      type: String,
+      default: "",
+      comment: "OCR / parsed text from uploaded document",
     },
   },
   { timestamps: true }

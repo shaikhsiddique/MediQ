@@ -40,7 +40,7 @@ const registerDoctorSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).required(),
   email: Joi.string().email().lowercase().trim().required(),
   password: passwordSchema,
-  phone: Joi.string().trim().min(8).max(20),
+  phone: Joi.string().trim().min(8).max(20).required(),
   address: Joi.string().trim().max(500).allow(""),
   specialization: Joi.string().trim().max(100),
   licenseNumber: Joi.string().trim().max(50),

@@ -6,8 +6,8 @@ function ProtectedRoute({ children, role }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50">
-        <p className="text-gray-600 font-medium">Loading...</p>
+      <div className="page-shell flex items-center justify-center min-h-screen">
+        <p className="text-gray-600 dark:text-slate-400 font-medium">Loading...</p>
       </div>
     );
   }

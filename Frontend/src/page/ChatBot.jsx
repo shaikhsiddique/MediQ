@@ -3,13 +3,18 @@ import {
   Send,
   Bot,
   User,
-  Heart,
   Sparkles,
   ArrowLeft,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useLanguage } from "../context/LanguageContext";
+import { useT, useLanguage } from "../context/LanguageContext";
+import { mrChatbot } from "../locales/mr";
 import { getSocket, disconnectSocket } from "../services/socket";
+import {
+  getStoredMascot,
+  mascotMediaUrl,
+  resolveMessageTone,
+} from "../utils/kidsBuddyMascot";
 
 function ChatBot() {
   const { language } = useLanguage();
@@ -50,19 +55,24 @@ function ChatBot() {
       back: "डैशबोर्ड पर वापस जाएं",
       error: "जवाब नहीं मिला। कृपया फिर से कोशिश करें।",
     },
+    mr: mrChatbot,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [mascot] = useState(getStoredMascot);
+
   const [messages, setMessages] = useState([
     {
       type: "bot",
       text:
         language === "hi"
           ? "नमस्ते 👋 मैं GlucoBot हूँ। मैं आपकी कैसे मदद कर सकता हूँ?"
+          : language === "mr"
+          ? mrChatbot.greeting
           : "Hello 👋 I am GlucoBot. How can I help you today?",
     },
   ]);
@@ -78,12 +88,22 @@ function ChatBot() {
       socket = getSocket();
       socketRef.current = socket;
 
-      const onConnect = () => setConnected(true);
+      const onConnect = () => {
+        setConnected(true);
+        socket.emit("chat:init");
+      };
       const onDisconnect = () => setConnected(false);
       const onTyping = ({ typing }) => setLoading(typing);
       const onReply = ({ reply, history }) => {
         historyRef.current = history || [];
-        setMessages((prev) => [...prev, { type: "bot", text: reply }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "bot",
+            text: reply,
+            tone: resolveMessageTone(reply),
+          },
+        ]);
         setLoading(false);
       };
       const onError = ({ message: errMsg }) => {
@@ -94,13 +114,34 @@ function ChatBot() {
         setLoading(false);
       };
 
+      const onHistoryLoaded = ({ messages }) => {
+        if (messages?.length > 0) {
+          const restored = messages.map((m) => ({
+            type: m.role === "user" ? "user" : "bot",
+            text: m.content,
+          }));
+          historyRef.current = messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          }));
+          setMessages((prev) => {
+            const greeting = prev[0];
+            return [greeting, ...restored];
+          });
+        }
+      };
+
       socket.on("connect", onConnect);
       socket.on("disconnect", onDisconnect);
       socket.on("chat:typing", onTyping);
       socket.on("chat:reply", onReply);
       socket.on("chat:error", onError);
+      socket.on("chat:history_loaded", onHistoryLoaded);
 
-      if (socket.connected) setConnected(true);
+      if (socket.connected) {
+        setConnected(true);
+        socket.emit("chat:init");
+      }
 
       return () => {
         socket.off("connect", onConnect);
@@ -108,6 +149,7 @@ function ChatBot() {
         socket.off("chat:typing", onTyping);
         socket.off("chat:reply", onReply);
         socket.off("chat:error", onError);
+        socket.off("chat:history_loaded", onHistoryLoaded);
         disconnectSocket();
       };
     } catch {
@@ -132,7 +174,7 @@ function ChatBot() {
   const quickQuestions = [t.q1, t.q2, t.q3, t.q4];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-3 sm:p-5 md:p-8">
+    <div className="page-shell p-3 sm:p-5 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <Link
@@ -210,7 +252,18 @@ function ChatBot() {
                       {msg.type === "user" ? (
                         <User className="w-5 h-5" />
                       ) : (
-                        <Heart className="w-5 h-5 text-green-500" />
+                        <img
+                          src={mascotMediaUrl(
+                            mascot,
+                            msg.tone || resolveMessageTone(msg.text),
+                            "gif"
+                          )}
+                          alt="Buddy"
+                          className="w-10 h-10 rounded-full object-cover ring-2 ring-green-200"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
                       )}
                     </div>
                     <p className="leading-relaxed text-sm sm:text-base break-words">

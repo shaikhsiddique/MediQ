@@ -3,3 +3,6 @@ export const API_BASE =
 
 export const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+
+export const NUTRIFINDER_URL =
+  import.meta.env.VITE_NUTRIFINDER_URL || 'YOUR_DEPLOYMENT_LINK';

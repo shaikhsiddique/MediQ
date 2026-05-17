@@ -1,0 +1,14 @@
+{
+  "name": "mediq-dummy-data",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Standalone dummy health data generator for mediQ (dev/testing only)",
+  "scripts": {
+    "generate": "node generate.js",
+    "generate:high-risk": "node generate.js --risk=high --count=6"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.6.2"
+  }
+}

@@ -13,6 +13,39 @@ const heredityHistorySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const chatMessageSchema = new mongoose.Schema(
+  {
+    role: { type: String, enum: ["user", "assistant"], required: true },
+    content: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+const chatSessionSchema = new mongoose.Schema(
+  {
+    title: { type: String, default: "Health Chat" },
+    messages: { type: [chatMessageSchema], default: [] },
+    summary: { type: String, default: "" },
+    messageCount: { type: Number, default: 0 },
+    topics: [{ type: String }],
+    status: { type: String, enum: ["active", "archived"], default: "active" },
+    startedAt: { type: Date, default: Date.now },
+    endedAt: { type: Date },
+  },
+  { timestamps: true }
+);
+
+const chatSummarySchema = new mongoose.Schema(
+  {
+    summary: { type: String, required: true },
+    messageCount: { type: Number, default: 0 },
+    topics: [{ type: String }],
+    lastUpdated: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const patientSchema = new mongoose.Schema(
   {
     name: {
@@ -74,6 +107,22 @@ const patientSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      comment: "Profile notes written by the patient",
+    },
+    latestHealthSummary: {
+      type: String,
+      default: "",
+      trim: true,
+      comment: "AI summary from the most recent report",
+    },
+    monthlyHealthSummary: {
+      type: String,
+      default: "",
+      trim: true,
+      comment: "AI aggregate summary of reports from the last 30 days",
+    },
+    monthlySummaryUpdatedAt: {
+      type: Date,
     },
     diabeticScore: {
       type: Number,
@@ -84,6 +133,19 @@ const patientSchema = new mongoose.Schema(
     isDiabetic: {
       type: Boolean,
       default: false,
+    },
+    chats: {
+      type: [chatSessionSchema],
+      default: [],
+    },
+    chatSummaries: {
+      type: [chatSummarySchema],
+      default: [],
+    },
+    currentChatSummary: {
+      type: String,
+      default: "",
+      trim: true,
     },
     doctor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -99,6 +161,18 @@ const patientSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Report",
+      },
+    ],
+    documents: [
+      {
+        url: { type: String, required: true },
+        fileName: { type: String, default: "" },
+        mimeType: { type: String, default: "" },
+        reportId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Report",
+        },
+        uploadedAt: { type: Date, default: Date.now },
       },
     ],
   },

@@ -7,11 +7,10 @@ import {
   CheckCircle
 } from 'lucide-react';
 
-import { useLanguage } from '../context/LanguageContext';
+import { useT } from '../context/LanguageContext';
+import { mrHow } from '../locales/mr';
 
 const HowItWorks = () => {
-
-  const { language } = useLanguage();
 
   const translations = {
     en: {
@@ -89,10 +88,11 @@ const HowItWorks = () => {
             "उच्च जोखिम की स्थिति में माता-पिता और डॉक्टरों के लिए तुरंत सूचनाएँ और मार्गदर्शन प्राप्त करें।"
         }
       ]
-    }
+    },
+    mr: mrHow,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   const steps = [
     {

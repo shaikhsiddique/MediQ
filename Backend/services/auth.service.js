@@ -77,17 +77,12 @@ const registerPatient = async (data) => {
     patient.healthRecords.push(health._id);
   }
 
-  if (doctorId) {
-    const doctor = await Doctor.findById(doctorId);
-    if (!doctor) {
-      throw new ApiError(404, "Doctor not found");
-    }
-    patient.doctor = doctor._id;
-    doctor.patients.push(patient._id);
-    await doctor.save();
-  }
-
   await patient.save();
+
+  if (doctorId) {
+    const linkService = require("./link.service");
+    await linkService.linkPatientAndDoctor(patient._id, doctorId, "patient");
+  }
 
   return formatAuthResponse(patient, "patient");
 };

@@ -1,11 +1,10 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
 
-import { useLanguage } from '../context/LanguageContext';
+import { useT } from '../context/LanguageContext';
+import { mrFooter } from '../locales/mr';
 
 const Footer = () => {
-
-  const { language } = useLanguage();
 
   const translations = {
     en: {
@@ -54,10 +53,11 @@ const Footer = () => {
 
       copyright:
         "© 2026 स्मार्ट हेल्थकेयर। सर्वाधिकार सुरक्षित। D1-PS2 हैकाथॉन थीम: स्मार्ट हेल्थकेयर के लिए बनाया गया"
-    }
+    },
+    mr: mrFooter,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   return (
     <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-12">

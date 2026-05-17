@@ -14,13 +14,13 @@ import {
 
 import { Link, useNavigate } from "react-router-dom";
 
-import { useLanguage } from "../context/LanguageContext";
+import { useT } from "../context/LanguageContext";
+import { mrLogin } from "../locales/mr";
+import LanguageThemeControls from "../components/LanguageThemeControls";
 import { authAPI } from "../services/api";
 import { useUser } from "../context/UserContext";
 
 function Login() {
-
-  const { language } = useLanguage();
 
   const navigate = useNavigate();
   const { login } = useUser();
@@ -69,9 +69,10 @@ function Login() {
       user: "यूज़र",
       doctor: "डॉक्टर",
     },
+    mr: mrLogin,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   const handleChange = (e) => {
 
@@ -112,9 +113,10 @@ function Login() {
 
   return (
 
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
+    <div className="page-shell flex items-center justify-center p-4 relative">
+      <LanguageThemeControls className="absolute top-4 right-4 z-10" />
 
-      <div className="w-full max-w-md bg-white rounded-[32px] shadow-2xl p-8 border border-gray-100">
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl p-8 border border-gray-100 dark:border-slate-700">
 
         {/* Logo */}
         <div className="flex flex-col items-center">

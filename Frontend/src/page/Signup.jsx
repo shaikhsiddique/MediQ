@@ -15,7 +15,9 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useLanguage } from "../context/LanguageContext";
+import { useT } from "../context/LanguageContext";
+import { mrSignup } from "../locales/mr";
+import LanguageThemeControls from "../components/LanguageThemeControls";
 import { authAPI } from "../services/api";
 import { useUser } from "../context/UserContext";
 import HealthVitalsFields from "../components/HealthVitalsFields";
@@ -40,7 +42,6 @@ const defaultVitals = {
 };
 
 function Signup() {
-  const { language } = useLanguage();
   const navigate = useNavigate();
   const { login } = useUser();
 
@@ -160,9 +161,10 @@ function Signup() {
       healthSummary: "स्वास्थ्य नोट्स",
       healthSummaryPlaceholder: "एलर्जी, दवाएं, पिछली बीमारियां...",
     },
+    mr: mrSignup,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -235,7 +237,8 @@ function Signup() {
     "w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
+    <div className="page-shell flex items-center justify-center p-4 relative">
+      <LanguageThemeControls className="absolute top-4 right-4 z-10" />
       <div
         className={`w-full bg-white rounded-[32px] shadow-2xl p-8 border border-gray-100 ${
           step === 2 && role === "user" ? "max-w-2xl" : "max-w-md"

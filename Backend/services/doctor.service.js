@@ -30,47 +30,26 @@ const getPatients = async (doctorId) => {
   return doctor.patients;
 };
 
+const linkService = require("./link.service");
+
 const assignPatient = async (doctorId, patientId) => {
-  const [doctor, patient] = await Promise.all([
-    Doctor.findById(doctorId),
-    Patient.findById(patientId),
-  ]);
+  const result = await linkService.doctorLinksPatient(doctorId, { patientId });
+  return result.patient;
+};
 
-  if (!doctor) throw new ApiError(404, "Doctor not found");
-  if (!patient) throw new ApiError(404, "Patient not found");
-
-  if (!doctor.patients.some((id) => id.toString() === patientId)) {
-    doctor.patients.push(patient._id);
-    await doctor.save();
-  }
-
-  patient.doctor = doctor._id;
-  await patient.save();
-
-  return patient;
+const assignPatientByEmail = async (doctorId, patientEmail) => {
+  const result = await linkService.doctorLinksPatient(doctorId, { patientEmail });
+  return result;
 };
 
 const removePatient = async (doctorId, patientId) => {
-  const doctor = await Doctor.findById(doctorId);
-  if (!doctor) throw new ApiError(404, "Doctor not found");
-
-  doctor.patients = doctor.patients.filter(
-    (id) => id.toString() !== patientId
-  );
-  await doctor.save();
-
-  const patient = await Patient.findById(patientId);
-  if (patient?.doctor?.toString() === doctorId) {
-    patient.doctor = undefined;
-    await patient.save();
-  }
-
-  return { message: "Patient removed from doctor's list" };
+  return linkService.doctorUnlinksPatient(doctorId, patientId);
 };
 
 module.exports = {
   getProfile,
   getPatients,
   assignPatient,
+  assignPatientByEmail,
   removePatient,
 };

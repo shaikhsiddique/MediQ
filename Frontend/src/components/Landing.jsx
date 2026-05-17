@@ -8,11 +8,10 @@ import {
   BarChart3
 } from 'lucide-react';
 
-import { useLanguage } from '../context/LanguageContext';
+import { useT } from '../context/LanguageContext';
+import { mrLanding } from '../locales/mr';
 
 const Landing = () => {
-
-  const { language } = useLanguage();
 
   const translations = {
     en: {
@@ -53,15 +52,16 @@ const Landing = () => {
       assessment: "AI मूल्यांकन",
       good: "अच्छा",
       normal: "सामान्य"
-    }
+    },
+    mr: mrLanding,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   return (
     <section
       id="home"
-      className="pt-24 pb-16 bg-gradient-to-br from-blue-50 via-white to-green-50 min-h-screen flex items-center"
+      className="page-shell pt-24 pb-16 flex items-center"
     >
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

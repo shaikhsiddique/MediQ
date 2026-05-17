@@ -26,4 +26,27 @@ const createReportSchema = Joi.object({
 
 const updateReportSchema = createReportSchema.min(1);
 
-module.exports = { createReportSchema, updateReportSchema };
+const kidsBuddyReportSchema = Joi.object({
+  answers: Joi.array()
+    .items(
+      Joi.object({
+        questionKey: Joi.string().required(),
+        question: Joi.string().required(),
+        answerType: Joi.string().valid("yes", "little", "no").required(),
+        points: Joi.number().min(0).max(2),
+        feedback: Joi.string().allow("").max(500),
+      })
+    )
+    .min(1)
+    .required(),
+  totalScore: Joi.number().min(0).required(),
+  maxScore: Joi.number().min(1).required(),
+  language: Joi.string().valid("en", "hi", "mr").default("en"),
+});
+
+module.exports = {
+  createReportSchema,
+  updateReportSchema,
+  kidsBuddyReportSchema,
+};
+

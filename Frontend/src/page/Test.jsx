@@ -21,10 +21,10 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
-import { useLanguage } from "../context/LanguageContext";
+import { useT } from "../context/LanguageContext";
+import { mrTest } from "../locales/mr";
 
 function Test() {
-  const { language } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -55,9 +55,17 @@ function Test() {
 
       submit: "Analyze with AI",
       uploadTitle: "Upload Lab Report / Document",
-      uploadHint: "PDF, image, or text — analyzed by Gemini AI",
+      uploadHint:
+        "PDF, image, or text — analyzed by local AI (Ollama). Attach here to include with your test below, or use Upload & Analyze alone.",
       uploadBtn: "Upload & Analyze",
-      aiPowered: "Powered by Gemini AI",
+      aiPowered: "Powered by Ollama AI",
+      aiSummary: "AI Summary",
+      confidenceLabel: "Confidence",
+      goDashboard: "Go to Dashboard",
+      viewHistory: "View History",
+      savedReport: "Report saved on server",
+      viewReport: "Open saved PDF",
+      ocrPreview: "Text detected from report (OCR)",
 
       result: "AI Risk Analysis",
 
@@ -102,9 +110,13 @@ function Test() {
 
       submit: "AI से विश्लेषण करें",
       uploadTitle: "लैब रिपोर्ट / दस्तावेज अपलोड करें",
-      uploadHint: "PDF, छवि या टेक्स्ट — Gemini AI द्वारा विश्लेषित",
+      uploadHint: "PDF, छवि या टेक्स्ट — Ollama AI द्वारा विश्लेषित",
       uploadBtn: "अपलोड और विश्लेषण",
-      aiPowered: "Gemini AI द्वारा संचालित",
+      aiPowered: "Ollama AI द्वारा संचालित",
+      aiSummary: "AI सारांश",
+      confidenceLabel: "विश्वास",
+      goDashboard: "डैशबोर्ड पर जाएं",
+      viewHistory: "इतिहास देखें",
 
       result: "AI जोखिम विश्लेषण",
 
@@ -123,9 +135,10 @@ function Test() {
       highText:
         "डायबिटीज से संबंधित संकेत पाए गए हैं। कृपया डॉक्टर से संपर्क करें।",
     },
+    mr: mrTest,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   const [formData, setFormData] = useState({
     glucose: 95,
@@ -228,7 +241,9 @@ function Test() {
           report?.riskLevel,
           report?.recommendation,
           report?.healthSummary,
-          report?.aiConfidence
+          report?.aiConfidence,
+          report?.documentUrl,
+          report?.extractedText
         )
       );
       setUploadFile(null);
@@ -239,7 +254,15 @@ function Test() {
     }
   };
 
-  const mapRiskDisplay = (score, riskLevel, recommendation, healthSummary, confidence) => {
+  const mapRiskDisplay = (
+    score,
+    riskLevel,
+    recommendation,
+    healthSummary,
+    confidence,
+    documentUrl = null,
+    extractedText = ""
+  ) => {
     const levelKey = riskLevel || (score < 35 ? "low" : score < 60 ? "medium" : "high");
     const level =
       levelKey === "low" ? t.low : levelKey === "medium" ? t.medium : t.high;
@@ -256,6 +279,8 @@ function Test() {
       recommendation: recommendation || (levelKey === "low" ? t.lowText : levelKey === "medium" ? t.mediumText : t.highText),
       healthSummary: healthSummary || "",
       confidence: confidence ?? 85,
+      documentUrl,
+      extractedTextPreview: extractedText ? extractedText.slice(0, 280) : "",
       colorClasses,
     };
   };
@@ -279,7 +304,7 @@ function Test() {
         additionalOverallRemarks: formData.remarks,
         fieldRemarks: buildFieldRemarks(),
       };
-      const data = await reportAPI.create(payload);
+      const data = await reportAPI.create(payload, uploadFile || null);
       const report = data.report;
       setResult(
         mapRiskDisplay(
@@ -287,9 +312,12 @@ function Test() {
           report?.riskLevel,
           report?.recommendation,
           report?.healthSummary,
-          report?.aiConfidence
+          report?.aiConfidence,
+          report?.documentUrl,
+          report?.extractedText
         )
       );
+      setUploadFile(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -399,7 +427,7 @@ function Test() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 md:p-8 pt-24">
+    <div className="page-shell p-4 md:p-8 pt-24">
       <Navbar />
       <div className="max-w-7xl mx-auto">
         <Link
@@ -627,15 +655,37 @@ function Test() {
                 </p>
               </div>
             </div>
+            {result.documentUrl && (
+              <div className="mt-4 bg-emerald-50 rounded-3xl p-6">
+                <p className="text-sm font-semibold text-emerald-800">{t.savedReport}</p>
+                <a
+                  href={result.documentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-2 text-emerald-700 font-semibold hover:underline"
+                >
+                  <Upload className="w-4 h-4" />
+                  {t.viewReport}
+                </a>
+              </div>
+            )}
+            {result.extractedTextPreview && (
+              <div className="mt-4 bg-gray-50 rounded-3xl p-6 border border-gray-100">
+                <p className="text-sm font-semibold text-gray-700">{t.ocrPreview}</p>
+                <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap line-clamp-6">
+                  {result.extractedTextPreview}
+                </p>
+              </div>
+            )}
             {result.healthSummary && (
               <div className="mt-4 bg-purple-50 rounded-3xl p-6">
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
                   <Bot className="w-5 h-5 text-purple-500" />
-                  AI Summary
+                  {t.aiSummary}
                 </h3>
                 <p className="mt-2 text-gray-600">{result.healthSummary}</p>
                 <p className="mt-2 text-sm text-purple-600">
-                  Confidence: {result.confidence}%
+                  {t.confidenceLabel}: {result.confidence}%
                 </p>
               </div>
             )}
@@ -645,10 +695,10 @@ function Test() {
                 state={{ riskScore: result.score, riskLevel: result.levelKey }}
                 className="bg-blue-500 text-white px-8 py-3 rounded-2xl font-semibold hover:bg-blue-600"
               >
-                Go to Dashboard
+                {t.goDashboard}
               </Link>
               <Link to="/history" className="bg-gray-100 text-gray-700 px-8 py-3 rounded-2xl font-semibold hover:bg-gray-200">
-                View History
+                {t.viewHistory}
               </Link>
             </div>
           </div>

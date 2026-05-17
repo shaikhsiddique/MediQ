@@ -6,11 +6,10 @@ import {
   Users
 } from 'lucide-react';
 
-import { useLanguage } from '../context/LanguageContext';
+import { useT } from '../context/LanguageContext';
+import { mrAbout } from '../locales/mr';
 
 const AboutUs = () => {
-
-  const { language } = useLanguage();
 
   const translations = {
     en: {
@@ -89,10 +88,11 @@ const AboutUs = () => {
             "भारत के ग्रामीण और शहरी क्षेत्रों के लिए बहुभाषी इंटरफेस और व्यक्तिगत देखभाल।"
         }
       ]
-    }
+    },
+    mr: mrAbout,
   };
 
-  const t = translations[language];
+  const t = useT(translations);
 
   const features = [
     {
