@@ -145,7 +145,7 @@ PARENT_PHONE_NUMBER=
 | Name | Profile |
 |---|---|
 | Siddique Shaikh | [@shaikhsiddique](https://github.com/shaikhsiddique) |
-| Omkar Ghorpade | [LinkedIn](https://www.linkedin.com/in/omkar-ghorpade-90a4702b3/) | [@Omkar Ghorpade](https://github.com/ThomasOOO7) |
+| Omkar Ghorpade | [LinkedIn](https://www.linkedin.com/in/omkar-ghorpade-90a4702b3/) |
 | Sai Jadhav | [LinkedIn](https://www.linkedin.com/in/sai-jadhav-8b9b54324/) |
 | Yash Jagdale | [LinkedIn](https://www.linkedin.com/in/yash-jagdale-7a79ab287/) |
 
